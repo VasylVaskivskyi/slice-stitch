@@ -111,8 +111,8 @@ def get_dataset_info(img_dir: Path):
 
     for ch in channel_ids:
         ch_selection = df[df['CH'] == ch].index
+        path_list_per_zplane = []
         for zplane in zplane_ids:
-            path_list_per_zplane = []
 
             z_selection = df[df.loc[ch_selection, 'Z'] == zplane].index
             path_list = list(df.loc[z_selection, 'path'])
