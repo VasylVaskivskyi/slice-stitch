@@ -140,9 +140,8 @@ def main(img_dir: Path, out_path: Path, overlap: int, padding_str: str, is_mask:
         print('getting values for remapping')
         border_map_per_channel_per_zplane = []
         for path_list_per_channel in path_list_per_channel_per_tile:
+            border_map_per_zplane = []
             for zplane_path_list in path_list_per_channel:
-                border_map_per_zplane = []
-
                 tile_list = load_tiles(zplane_path_list, is_mask)
                 border_map = get_border_map(tile_list, x_ntiles, y_ntiles, overlap)
 
