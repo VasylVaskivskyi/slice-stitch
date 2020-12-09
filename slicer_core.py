@@ -77,8 +77,14 @@ def split_by_size(arr: np.ndarray, zplane: int, channel: int, tile_w: int, tile_
     tile_shape = [tile_h, tile_w]
     ntiles = dict(x=x_ntiles, y=y_ntiles)
     padding = dict(left=0, right=0, top=0, bottom=0)
-    padding["right"] = tile_w - (arr_width % tile_w)
-    padding["bottom"] = tile_h - (arr_height % tile_h)
+    if arr_width % tile_w == 0:
+        padding["right"] = 0
+    else:
+        padding["right"] = tile_w - (arr_width % tile_w)
+    if arr_height % tile_h == 0:
+        padding["bottom"] = 0
+    else:
+        padding["bottom"] = tile_h - (arr_height % tile_h)
     info = dict(tile_shape=tile_shape, ntiles=ntiles, overlap=overlap, padding=padding)
     return tiles, img_names, info
 
