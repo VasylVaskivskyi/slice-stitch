@@ -3,7 +3,9 @@ import numpy as np
 Image = np.ndarray
 
 
-def get_tile(big_image: Image, hor_f: int, hor_t: int, ver_f: int, ver_t: int, overlap=0):
+def get_tile(
+    big_image: Image, hor_f: int, hor_t: int, ver_f: int, ver_t: int, overlap=0
+):
     hor_f -= overlap
     hor_t += overlap
     ver_f -= overlap
@@ -33,25 +35,39 @@ def get_tile(big_image: Image, hor_f: int, hor_t: int, ver_f: int, ver_t: int, o
         bot_pad_size = bot_check
         ver_t = big_image.shape[-2]
 
-    tile_slice = (slice(ver_f, ver_t), slice(hor_f, hor_t))
+    if len(big_image.shape) > 2:
+        extra_dim_size = len(big_image.shape) - 2
+        extra_dim_slice = tuple([slice(None)] * extra_dim_size)
+        tile_slice = extra_dim_slice + (slice(ver_f, ver_t), slice(hor_f, hor_t))
+        extra_dim_pad = tuple([(0, 0)] * extra_dim_size)
+        padding = extra_dim_pad + (
+            (top_pad_size, bot_pad_size),
+            (left_pad_size, right_pad_size),
+        )
+    else:
+        tile_slice = (slice(ver_f, ver_t), slice(hor_f, hor_t))
+        padding = ((top_pad_size, bot_pad_size), (left_pad_size, right_pad_size))
     tile = big_image[tile_slice]
-    padding = ((top_pad_size, bot_pad_size), (left_pad_size, right_pad_size))
     if max(padding) > (0, 0):
-        tile = np.pad(tile, padding, mode='constant')
+        tile = np.pad(tile, padding, mode="constant")
     return tile
 
 
-def split_by_size(arr: np.ndarray, zplane: int, channel: int, tile_w: int, tile_h: int, overlap: int):
-    """ Splits image into tiles by size of tile.
-        tile_w - tile width
-        tile_h - tile height
+def split_by_size(arr: np.ndarray, zplane: int, tile_w: int, tile_h: int, overlap: int):
+    """Splits image into tiles by size of tile.
+    tile_w - tile width
+    tile_h - tile height
     """
     x_axis = -1
     y_axis = -2
     arr_width, arr_height = arr.shape[x_axis], arr.shape[y_axis]
 
-    x_ntiles = arr_width // tile_w if arr_width % tile_w == 0 else (arr_width // tile_w) + 1
-    y_ntiles = arr_height // tile_h if arr_height % tile_h == 0 else (arr_height // tile_h) + 1
+    x_ntiles = (
+        arr_width // tile_w if arr_width % tile_w == 0 else (arr_width // tile_w) + 1
+    )
+    y_ntiles = (
+        arr_height // tile_h if arr_height % tile_h == 0 else (arr_height // tile_h) + 1
+    )
 
     tiles = []
     img_names = []
@@ -71,7 +87,9 @@ def split_by_size(arr: np.ndarray, zplane: int, channel: int, tile_w: int, tile_
             tile = get_tile(arr, hor_f, hor_t, ver_f, ver_t, overlap)
 
             tiles.append(tile)
-            name = 'X{x:03d}_Y{y:03d}_Z{z:03d}_CH{ch:03d}.tif'.format(x=j + 1, y=i + 1, z=zplane + 1, ch=channel + 1)
+            name = "X{x:03d}_Y{y:03d}_Z{z:03d}.tif".format(
+                x=j + 1, y=i + 1, z=zplane + 1
+            )
             img_names.append(name)
 
     tile_shape = [tile_h, tile_w]
@@ -87,16 +105,3 @@ def split_by_size(arr: np.ndarray, zplane: int, channel: int, tile_w: int, tile_
         padding["bottom"] = tile_h - (arr_height % tile_h)
     info = dict(tile_shape=tile_shape, ntiles=ntiles, overlap=overlap, padding=padding)
     return tiles, img_names, info
-
-
-def split_by_ntiles(arr: np.ndarray, zplane: int, channel: int, x_ntiles: int, y_ntiles: int, overlap: int):
-    """ Splits image into tiles by number of tile.
-        x_ntiles - number of tiles horizontally
-        y_ntiles - number of tiles vertically
-    """
-    img_width, img_height = arr.shape[-1], arr.shape[-2]
-    tile_w = img_width // x_ntiles
-    tile_h = img_height // y_ntiles
-    return split_by_size(arr, zplane, channel, tile_w, tile_h, overlap)
-
-
