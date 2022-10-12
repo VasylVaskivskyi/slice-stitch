@@ -59,7 +59,7 @@ def get_labels_sorted_by_coordinates(img) -> List[int]:
     return labels_sorted_by_coord
 
 
-def get_new_labels(img: Image) -> np.ndarray:
+def get_new_labels(img: Image) -> Tuple[np.ndarray, Dict[int, int]]:
     dtype = img.dtype
     unique_label_ids, indices = np.unique(img, return_inverse=True)
 
@@ -75,13 +75,24 @@ def get_new_labels(img: Image) -> np.ndarray:
         updated_label_ids.append(label_map[_id])
 
     new_unique_label_ids = np.array(updated_label_ids, dtype=dtype)
-    return new_unique_label_ids
+    return new_unique_label_ids, label_map
 
 
 def reset_label_ids(img, new_label_ids) -> Image:
     dtype = img.dtype
     unique_labels, indices = np.unique(img, return_inverse=True)
     reset_img = new_label_ids[indices].reshape(img.shape).astype(dtype)
+    return reset_img
+
+
+def reset_label_ids_large(img: Image, label_map: Dict[int, int]) -> Image:
+    props = regionprops_table(img, properties=("label", "coords"))
+    reset_img = img.copy()
+    for i, old_id in enumerate(props["label"]):
+        new_id = label_map[old_id]
+        coords = props["coords"][i]
+        np_coords = tuple((coords[:,0], coords[:,1]))
+        reset_img[np_coords] = new_id
     return reset_img
 
 
@@ -577,10 +588,11 @@ def process_all_masks(
         del stitched_imgs
         gc.collect()
 
-    new_label_ids = get_new_labels(matched_masks[0])  # cell
+    new_label_ids, label_map = get_new_labels(matched_masks[0])  # cell
     reset_imgs = []
     for i in range(0, len(matched_masks)):
-        reset_img = reset_label_ids(matched_masks[i], new_label_ids)
+        reset_img = reset_label_ids_large(matched_masks[i], label_map)
+        #reset_img = reset_label_ids(matched_masks[i], new_label_ids)
         reset_imgs.append(reset_img)
 
     y_size = reset_imgs[0].shape[0]
